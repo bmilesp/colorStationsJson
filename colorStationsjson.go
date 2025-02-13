@@ -1,9 +1,7 @@
 package colorStationsJson
 
 import (
-	"bytes"
 	"fmt"
-	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/table"
@@ -36,39 +34,16 @@ func NewFormatter() *Formatter {
 	}
 }
 
-func (f *Formatter) sprintfColor(c *color.Color, format string, args ...interface{}) string {
-	if f.DisabledColor || c == nil {
-		return fmt.Sprintf(format, args...)
-	}
-	return c.SprintfFunc()(format, args...)
-}
-
-func (f *Formatter) sprintColor(c *color.Color, s string) string {
-	if f.DisabledColor || c == nil {
-		return fmt.Sprint(s)
-	}
-	return c.SprintFunc()(s)
-}
-
-func (f *Formatter) writeIndent(buf *bytes.Buffer, depth int) {
-	buf.WriteString(strings.Repeat(" ", f.Indent*depth))
-}
-
-func (f *Formatter) writeObjSep(buf *bytes.Buffer) {
-	if f.Indent != 0 {
-		buf.WriteByte('\n')
-	} else {
-		buf.WriteByte(' ')
-	}
-}
-
 func (f *Formatter) Marshal(jsonObj interface{}) string { //([]byte, error) {
-
-	return f.marshalValue(jsonObj, 0)
+	switch v := jsonObj.(type) {
+	case map[string]interface{}:
+		return f.marshalMap(v)
+	}
+	return "Must be type map[string]interface{}"
 	//return buffer.Bytes(), nil
 }
 
-func (f *Formatter) marshalMap(m map[string]interface{}, depth int) string {
+func (f *Formatter) marshalMap(m map[string]interface{}) string {
 
 	keys := make([]string, 0)
 	for key := range m {
@@ -79,24 +54,42 @@ func (f *Formatter) marshalMap(m map[string]interface{}, depth int) string {
 	for _, key := range keys {
 
 		tble.Row(key)
-		switch m[key].(type) {
+		switch v := m[key].(type) {
 
 		case map[string]interface{}:
-			tble.Row(f.marshalValue(m[key], depth+1))
+			var tble = table.New().
+				BorderStyle(lipgloss.NewStyle().Foreground(lipgloss.Color("99")))
+			tble.Row(f.marshalMap(v))
+			return tble.Render()
+		case []interface{}:
+			if len(v) != 0 {
+				return f.marshalArray(v, key)
+			}
 		}
 
 	}
 	return tble.Render()
 }
 
-func (f *Formatter) marshalValue(val interface{}, depth int) string {
-	switch v := val.(type) {
-	case map[string]interface{}:
-		var tble = table.New().
-			BorderStyle(lipgloss.NewStyle().Foreground(lipgloss.Color("99")))
-		tble.Row(f.marshalMap(v, depth))
-		return tble.Render()
+func (f *Formatter) marshalArray(a []interface{}, key string) string {
+	var arrayTable = table.New().
+		BorderStyle(lipgloss.NewStyle().Foreground(lipgloss.Color("99")))
+	arrayTable.Row(key)
+	for _, v := range a {
+
+		if v.(map[string]interface{}) != nil {
+			arrayTable.Row(f.marshalMap(v.(map[string]interface{})))
+		} else {
+			fmt.Println("Not a map")
+		}
+
 	}
+	return arrayTable.Render()
+
+}
+
+func (f *Formatter) marshalValue(val interface{}) string {
+
 	return ""
 
 }
