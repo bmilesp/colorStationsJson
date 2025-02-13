@@ -1,8 +1,11 @@
-package colorjson_test
+package colorStationsJson_test
 
-import "testing"
-import "github.com/TylerBrock/colorjson"
-import "github.com/hokaccha/go-prettyjson"
+import (
+	"testing"
+
+	"github.com/TylerBrock/colorjson"
+	"github.com/hokaccha/go-prettyjson"
+)
 
 func benchmarkMarshall(i int, b *testing.B) {
 	simpleMap := make(map[string]interface{})
